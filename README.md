@@ -2,15 +2,15 @@
 
 ## PROJECT OVERVIEW
 This project demonstrates the lifecycle of a Health Savings Account (HSA):
--Create an account
--Deposit funds
--Issue a virtual debit card
--Simulate purchases (approve/decline IRS-qualified medical expenses)
+- Create an account
+- Deposit funds
+- Issue a virtual debit card
+- Simulate purchases (approve/decline IRS-qualified medical expenses)
 
 ## TECH STACK
-backend: FastAPI with Uvicorn
-frontend: JavaScript, html, css
-database: in-memory store (for demo -> implement database in future vision)
+- backend: FastAPI with Uvicorn
+- frontend: JavaScript, html, css
+- database: in-memory store (for demo -> implement database in future vision)
 
 ## STARTUP INSTRUCTIONS
 1) Clone the repo:
