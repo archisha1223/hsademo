@@ -1,0 +1,288 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>HSA Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg: #000;
+      --purple: #7d3cff;
+      --teal: #00d1b2;
+      --white: #fff;
+      --gray: #888;
+      --red: #ff4d4d;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background-color: var(--bg);
+      color: var(--white);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    .container {
+      width: 100%;
+      max-width: 800px;
+      padding: 20px;
+      border: 2px solid var(--purple);
+      border-radius: 12px;
+      box-shadow: 0 0 16px rgba(125, 60, 255, 0.4);
+      margin-bottom: 20px;
+    }
+    h1, h2 {
+      color: var(--teal);
+      margin-bottom: 10px;
+    }
+    input, select {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid var(--purple);
+      background-color: #111;
+      color: var(--white);
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px;
+      width: 100%;
+      background-color: var(--purple);
+      border: none;
+      border-radius: 8px;
+      color: var(--white);
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    button:hover {
+      background-color: var(--teal);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    table th, table td {
+      padding: 8px;
+      text-align: center;
+      border-bottom: 1px solid var(--gray);
+    }
+    .status-approved {
+      color: var(--teal);
+    }
+    .status-declined {
+      color: var(--red);
+    }
+    .msg {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: var(--gray);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Welcome, <span id="userName"></span></h1>
+    <p><strong>Account ID:</strong> <span id="accountId"></span></p>
+    <p><strong>Balance:</strong> $<span id="balance">0.00</span></p>
+    <p><strong>Debit Card:</strong> <span id="cardInfo">Not issued yet</span></p>
+  </div>
+
+  <!-- Deposit Funds -->
+  <div class="container">
+    <h2>Deposit Funds</h2>
+    <input id="depositAmount" type="number" placeholder="Enter amount in dollars" />
+    <button id="depositBtn">Deposit</button>
+    <div class="msg" id="depositMsg"></div>
+  </div>
+
+  <!-- Issue Debit Card -->
+  <div class="container">
+    <h2>Issue Debit Card</h2>
+    <button id="cardBtn">Generate Card</button>
+    <div class="msg" id="cardMsg"></div>
+  </div>
+
+  <!-- Simulate Purchase -->
+  <div class="container">
+    <h2>Simulate Purchase</h2>
+    <select id="merchantSelect"></select>
+    <input id="purchaseAmount" type="number" placeholder="Enter amount in dollars" />
+    <button id="purchaseBtn">Make Purchase</button>
+    <div class="msg" id="purchaseMsg"></div>
+  </div>
+
+  <!-- Transaction History -->
+  <div class="container">
+    <h2>Transaction History</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Merchant</th>
+          <th>Category</th>
+          <th>Amount</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="transactions"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const API = "http://127.0.0.1:8000/api";
+    const accountId = localStorage.getItem("account_id");
+    const userName = localStorage.getItem("user_name");
+
+    // Populate username + account ID on dashboard
+    document.getElementById("userName").textContent = userName;
+    document.getElementById("accountId").textContent = accountId;
+
+    // Load Account Info 
+    async function loadAccount() {
+        const res = await fetch(`${API}/accounts/${accountId}`);
+        const data = await res.json();
+
+        // Update balance + card info
+        document.getElementById("balance").textContent = data.balance.toFixed(2);
+        document.getElementById("cardInfo").textContent = data.card
+        ? data.card.masked_pan
+        : "Not issued yet";
+
+        // Refresh transactions from the same response
+        loadTransactionsFromData(data);
+    }
+
+    // Load Merchants 
+    async function loadMerchants() {
+        const res = await fetch(`${API}/merchants`);
+        const merchants = await res.json();
+        const select = document.getElementById("merchantSelect");
+        select.innerHTML = "";
+        merchants.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m.id;
+        opt.textContent = `${m.name} (${m.category})`;
+        select.appendChild(opt);
+        });
+    }
+
+    // Deposit Funds 
+    document.getElementById("depositBtn").onclick = async () => {
+        const amount = parseFloat(document.getElementById("depositAmount").value);
+        if (!amount || amount <= 0) {
+        document.getElementById("depositMsg").textContent = "Please enter a valid amount.";
+        return;
+        }
+
+        // Call deposit API
+        const res = await fetch(`${API}/deposits`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ account_id: parseInt(accountId), amount })
+        });
+        const data = await res.json();
+
+        if (data.error) {
+        document.getElementById("depositMsg").textContent = "Deposit failed ❌";
+        } else {
+        document.getElementById("depositMsg").textContent = "Deposit successful ✅";
+        }
+
+        document.getElementById("depositAmount").value = "";
+        await loadAccount(); 
+    };
+
+    // Issue Debit Card 
+    document.getElementById("cardBtn").onclick = async () => {
+        const res = await fetch(`${API}/cards`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ account_id: parseInt(accountId) })
+        });
+        const data = await res.json();
+        document.getElementById("cardMsg").textContent =
+        data.masked_pan
+            ? `Card issued: ${data.masked_pan}`
+            : data.message || "Failed to issue card";
+
+        await loadAccount(); 
+    };
+
+    // Make Purchase 
+    document.getElementById("purchaseBtn").onclick = async () => {
+        const merchantId = parseInt(document.getElementById("merchantSelect").value);
+        const amount = parseFloat(document.getElementById("purchaseAmount").value);
+
+        if (!amount || amount <= 0) {
+        document.getElementById("purchaseMsg").textContent = "Please enter a valid amount.";
+        return;
+        }
+
+        // Get current card_id from account
+        const accRes = await fetch(`${API}/accounts/${accountId}`);
+        const accData = await accRes.json();
+        if (!accData.card) {
+        document.getElementById("purchaseMsg").textContent = "You must issue a debit card first.";
+        return;
+        }
+
+        const cardId = accData.card.id;
+
+        // Make purchase
+        const res = await fetch(`${API}/purchase`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            account_id: parseInt(accountId),
+            card_id: cardId,
+            merchant_id: merchantId,
+            amount
+        })
+        });
+
+        const data = await res.json();
+
+        if (data.status === "APPROVED") {
+        document.getElementById("purchaseMsg").textContent = "Purchase approved ✅";
+        } else {
+        document.getElementById("purchaseMsg").textContent =
+            `Purchase declined ❌ (${data.decline_reason || "Unknown reason"})`;
+        }
+
+        document.getElementById("purchaseAmount").value = "";
+        await loadAccount(); 
+    };
+
+    // Load Transactions from Account API 
+    function loadTransactionsFromData(data) {
+        const tbody = document.getElementById("transactions");
+        tbody.innerHTML = "";
+
+        if (!data.transactions || data.transactions.length === 0) {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td colspan="4" style="color: gray;">No transactions yet</td>`;
+        tbody.appendChild(row);
+        return;
+        }
+
+        data.transactions.forEach(tx => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${tx.merchant_name}</td>
+            <td>${tx.decline_reason ? "Non-Qualified" : "Qualified"}</td>
+            <td>$${tx.amount.toFixed(2)}</td>
+            <td class="status-${tx.status.toLowerCase()}">${tx.status}</td>
+        `;
+        tbody.appendChild(row);
+        });
+    }
+
+    // Initialize dashboard
+    loadAccount();
+    loadMerchants();
+  </script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>HSA Demo - Create Account</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg: #000;
+      --purple: #7d3cff;
+      --teal: #00d1b2;
+      --white: #fff;
+      --gray: #888;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, sans-serif;
+      background-color: var(--bg);
+      color: var(--white);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      width: 100%;
+      max-width: 400px;
+      padding: 32px;
+      border: 2px solid var(--purple);
+      border-radius: 12px;
+      box-shadow: 0 0 16px rgba(125, 60, 255, 0.4);
+      text-align: center;
+    }
+    h1 {
+      margin-bottom: 8px;
+      color: var(--teal);
+    }
+    p.tagline {
+      font-size: 0.9rem;
+      color: var(--gray);
+      margin-bottom: 20px;
+    }
+    input {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      border: 1px solid var(--purple);
+      border-radius: 8px;
+      background-color: #111;
+      color: var(--white);
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px;
+      width: 100%;
+      background-color: var(--purple);
+      border: none;
+      border-radius: 8px;
+      color: var(--white);
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    button:hover {
+      background-color: var(--teal);
+    }
+    .msg {
+      margin-top: 15px;
+      font-size: 0.9rem;
+      color: var(--gray);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Create Your HSA</h1>
+    <p class="tagline">Health Savings Accounts empower you to save more, spend smarter, and invest in your healthcare.</p>
+
+    <input id="name" placeholder="Full Name" />
+    <input id="email" placeholder="Email" />
+
+    <button id="createBtn">Create Account</button>
+    <div class="msg" id="msg"></div>
+  </div>
+  <script>
+    const API = "http://127.0.0.1:8000/api";
+    document.getElementById("createBtn").onclick = async () => {
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      if (!name || !email) {
+        document.getElementById("msg").textContent = "Please enter both fields.";
+        return;
+      }
+      const res = await fetch(`${API}/users`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ name, email })
+      });
+      const data = await res.json();
+      if (data.account_id) {
+        // Save account_id in localStorage for dashboard use
+        localStorage.setItem("account_id", data.account_id);
+        localStorage.setItem("user_name", name);
+        window.location.href = "dashboard.html";
+      } else {
+        document.getElementById("msg").textContent = "Error creating account.";
+      }
+    };
+  </script>
+</body>
+</html>
